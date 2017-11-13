@@ -41,11 +41,99 @@ def try_open_video_file(labeling_file_path):
         return None
 
 class RuneLabel:
-    def __init__(self):
+    def __init__(self, name, frame_num, frame):
+        # the info for label identify
+        self.video_name = name
+        self.frame_num = frame_num
+        self.raw_frame = frame
+        # the info for label
         self.is_rune_in_frame = False
-        self.grid_boding_box = [(None, None), (None, None)]
-        self.handwritten_number_boding_box = []
-        self.handwritten_number_position = [] # the center point of boding box
+        self.grid_boding_box = []
+        self.handwritten_number_boding_boxes = []
+        self.handwritten_number_positions = [] # the center point of boding box
+        self.handwritten_number_labels = []
+
+    def __str__(self):
+        # the info for label identify
+        print self.video_name
+        print self.frame_num
+
+        # the info for label
+        print self.is_rune_in_frame
+        print self.grid_boding_box
+        print self.handwritten_number_boding_boxes
+        print self.handwritten_number_positions # the center point of boding box
+        print self.handwritten_number_labels
+        return ""
+
+    def add_label(self, value, step=None):
+        self.is_rune_in_frame = True
+        if step==None:
+            step = self.get_step()
+        if step==0:
+            self.grid_boding_box = value
+        elif step%2==0:
+            self.handwritten_number_boding_boxes.append(value)
+        else:
+            self.handwritten_number_labels.append(value)
+
+    def delet_label(self, step=None):
+        if step==None:
+            step = self.get_step()
+        if step==2:
+            self.grid_boding_box = []
+        elif step%2==1:
+            self.handwritten_number_boding_boxes.pop()
+        else:
+            self.handwritten_number_labels.pop()
+
+    def get_step(self):
+        step = len(self.grid_boding_box)
+        step += len(self.handwritten_number_boding_boxes)
+        step += len(self.handwritten_number_labels)
+        return step
+
+    def draw_label(self, frame):
+        drawed_frame = frame.copy()
+        if self.is_rune_in_frame == False:
+            return drawed_frame
+
+        # drawing bounding box
+        if len(self.grid_boding_box)!=0:
+            points = self.grid_boding_box
+            cv2.rectangle(drawed_frame,
+                          (points[0][0],points[0][1]),
+                          (points[1][0],points[1][1]),
+                          self.get_draw_color("grid"),1)
+
+        # drawing cells and handwritten number labels
+        for cell in range(len(self.handwritten_number_boding_boxes)):
+            points = self.handwritten_number_boding_boxes[cell]
+            cv2.rectangle(drawed_frame,
+                          (points[0][0],points[0][1]),
+                          (points[1][0],points[1][1]),
+                          self.get_draw_color("cell"),1)
+
+        for cell in range(len(self.handwritten_number_labels)):
+            points = self.handwritten_number_boding_boxes[cell]
+            cv2.putText(drawed_frame,
+                        self.handwritten_number_labels[cell],
+                        (points[0][0],points[0][1]),
+                        cv2.FONT_HERSHEY_PLAIN, 2,
+                        self.get_draw_color("cell"),
+                        2)
+
+        # self.handwritten_number_labels
+        # self.handwritten_number_positions = []
+        return drawed_frame
+
+    def get_draw_color(self, label=None):
+        if label=="grid":
+            color = (0,255,0)
+        else:
+            color = (255,0,255)
+        return color
+
 
 class FrameLabeler:
     def __init__(self, v_name, v_source):
@@ -60,23 +148,75 @@ class FrameLabeler:
         self.ex, self.ey = None, None
         self.current_frame = None
         self.last_frame = None
+        self.drawed_frame = None
         self.mode = "grid"
 
+    def reset_current_frame_variable(self):
+        self.drawing = False
+        self.ix, self.iy = None, None
+        self.ex, self.ey = None, None
+        self.drawed_frame = self.current_frame.copy()
+        self.change_mode(mode="grid")
+
+    def reset_label(self, index):
+        self.reset_current_frame_variable()
+        self.label[index] = RuneLabel(self.__video_name__,
+                                      self.frame_num,
+                                      self.current_frame.copy())
+        cv2.imshow(self.__video_name__, self.current_frame)
+
     def read_next_frame(self):
-        ret, frame = self.__video_source__.read()
+        # print self.__video_source__.get(1)
+        if self.frame_num==len(self.label):
+            ret, frame = self.__video_source__.read()
+        else:
+            self.frame_num += 1
+            self.reset_current_frame_variable()
+            self.load_labeled_frame(self.frame_num-1)
+            print "labeling %s frame #%d" \
+                %(self.__video_name__,self.frame_num)
+                # %(self.__video_name__,len(self.label))
+            cv2.imshow(self.__video_name__, self.drawed_frame)
+            return
+        # print "Frame NO. %d" %self.__video_source__.get(1)
         if ret==False:
             self.is_EOF = True
         else:
             self.frame_num += 1
-            self.drawing = False
-            self.ix, self.iy = None, None
-            self.ex, self.ey = None, None
             self.last_frame = self.current_frame
             self.current_frame = frame
-            self.mode = "grid"
-
+            self.label.append(
+                RuneLabel(self.__video_name__,
+                          self.frame_num,
+                          self.current_frame.copy()))
+            self.reset_current_frame_variable()
+            print "labeling %s frame #%d" \
+                %(self.__video_name__,self.frame_num)
+                # %(self.__video_name__,len(self.label))
             cv2.imshow(self.__video_name__, self.current_frame)
         return frame
+
+    def read_last_frame(self):
+        self.frame_num -= 1
+        if self.frame_num<1:
+            self.frame_num = max(self.frame_num, 1)
+            print "[Error] Invalid command. Reach the first frame in file."
+        else:
+            self.reset_current_frame_variable()
+            self.load_labeled_frame(self.frame_num-1)
+            print "labeling %s frame #%d" \
+                %(self.__video_name__,self.frame_num)
+                # %(self.__video_name__,len(self.label))
+            cv2.imshow(self.__video_name__, self.drawed_frame)
+        return
+
+    # def save_labeled_frame(self, index):
+
+    def load_labeled_frame(self, index):
+        self.current_frame = self.label[index].raw_frame
+
+        # load label from memory
+        self.drawed_frame = self.label[index].draw_label(self.current_frame)
 
     def start_labeling(self):
         self.read_next_frame()
@@ -93,44 +233,79 @@ class FrameLabeler:
     def mouse_events_callback(self,event,x,y,flags,param):
         if event == cv2.EVENT_LBUTTONDOWN:
             self.drawing = True
-            self.ix, self.iy = x,y
+            if ((self.label[self.frame_num-1].get_step() % 2==0) or\
+            self.mode=="grid"):
+                self.ix, self.iy = x,y
+            if self.mode=="grid":
+                self.label[self.frame_num-1].delet_label(step=2)
+                print self.label[self.frame_num-1]
+                self.load_labeled_frame(self.frame_num-1)
+                cv2.imshow(self.__video_name__, self.drawed_frame)
 
         elif event == cv2.EVENT_MOUSEMOVE:
-            if self.drawing == True:
-                if self.mode=="grid":
-                    color = (0,255,0)
-                else:
-                    color = (255,0,255)
-                drawed_frame = self.current_frame.copy()
+            if self.drawing == True and\
+                    ((self.label[self.frame_num-1].get_step() % 2==0) or\
+                    self.mode=="grid"):
+                drawed_frame = self.drawed_frame.copy()
                 cv2.rectangle(drawed_frame,
-                                (self.ix,self.iy),
-                                (x,y),color,1)
+                              (self.ix,self.iy),
+                              (x,y),
+                              self.label[self.frame_num-1].get_draw_color(self.mode),
+                              1)
                 cv2.imshow(self.__video_name__,drawed_frame)
+                self.ex, self.ey = x,y
 
         elif event == cv2.EVENT_LBUTTONUP:
             self.drawing = False
-            self.ex, self.ey = x,y
+            if self.label[self.frame_num-1].get_step() % 2==0:
+                cv2.rectangle(self.drawed_frame,
+                            (self.ix,self.iy),
+                            (self.ex,self.ey),
+                            self.label[self.frame_num-1].get_draw_color(self.mode),
+                            1)
+
+                if self.mode=="grid":
+                    step = 0
+                    self.change_mode()
+                else:
+                    step = None
+
+                self.label[self.frame_num-1].add_label(
+                                [(self.ix,self.iy),(self.ex,self.ey)],
+                                step)
+                print self.label[self.frame_num-1]
+
 
     def keyboard_callback(self, key):
-        command = lambda: self.read_next_frame()
+        def ukn_key_handle():
+            pass
+        command = lambda: ukn_key_handle()
         if key == 27:
             self.is_EOF = True
             # print self.frame_num,"frames been labeled."
             command = lambda: exit()
         elif key == 13:
             command = ""
-        elif key == ord("n"):
+        elif key == ord("r"):
+            command = lambda: self.reset_label(self.frame_num-1)
+        elif key == ord("n") or key == 3:
             command = lambda: self.read_next_frame()
+        elif key == ord("l") or key == 2:
+            command = lambda: self.read_last_frame()
         elif key == ord("c"):
             command = lambda: self.change_mode()
-        elif key == ord("1"):
-            cv2.putText(self.current_frame,
+        elif key >= ord("0") and key <= ord("9"):
+            cv2.putText(self.drawed_frame,
                         chr(key), (self.ix,self.iy),
                         cv2.FONT_HERSHEY_PLAIN, 2,
-                        (0,0,255))
-            command = lambda: cv2.imshow(self.__video_name__, self.current_frame)
+                        self.label[self.frame_num-1].get_draw_color(self.mode),
+                        2)
+            if self.label[self.frame_num-1].get_step() % 2==1:
+                self.label[self.frame_num-1].add_label(chr(key))
+            command = lambda: cv2.imshow(self.__video_name__,
+                                         self.drawed_frame)
         else:
-            print "The ord(key) ==", key
+            print "Invalid key input, ord(key) ==", key
         return command
 
     def change_mode(self, mode=None):
