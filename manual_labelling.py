@@ -87,6 +87,9 @@ class RuneLabel:
         else:
             self.handwritten_number_labels.pop()
 
+        if self.get_step() == 0:
+            self.is_rune_in_frame = False
+
     def get_step(self):
         step = len(self.grid_boding_box)
         step += len(self.handwritten_number_boding_boxes)
@@ -218,6 +221,12 @@ class FrameLabeler:
         # load label from memory
         self.drawed_frame = self.label[index].draw_label(self.current_frame)
 
+        # auto reset mode
+        if len(self.label[index].grid_boding_box)<2:
+            self.change_mode(mode="grid")
+        else:
+            self.change_mode(mode="cell")
+
     def start_labeling(self):
         self.read_next_frame()
         cv2.setMouseCallback(self.__video_name__,
@@ -236,9 +245,10 @@ class FrameLabeler:
             if ((self.label[self.frame_num-1].get_step() % 2==0) or\
             self.mode=="grid"):
                 self.ix, self.iy = x,y
+                self.ex, self.ey = None,None
             if self.mode=="grid":
                 self.label[self.frame_num-1].delet_label(step=2)
-                print self.label[self.frame_num-1]
+                # print self.label[self.frame_num-1]
                 self.load_labeled_frame(self.frame_num-1)
                 cv2.imshow(self.__video_name__, self.drawed_frame)
 
@@ -257,6 +267,9 @@ class FrameLabeler:
 
         elif event == cv2.EVENT_LBUTTONUP:
             self.drawing = False
+            if self.ex==None: # single click without moving
+                # print "Single Click Preformed."
+                return
             if self.label[self.frame_num-1].get_step() % 2==0:
                 cv2.rectangle(self.drawed_frame,
                             (self.ix,self.iy),
@@ -273,7 +286,7 @@ class FrameLabeler:
                 self.label[self.frame_num-1].add_label(
                                 [(self.ix,self.iy),(self.ex,self.ey)],
                                 step)
-                print self.label[self.frame_num-1]
+                # print self.label[self.frame_num-1]
 
 
     def keyboard_callback(self, key):
@@ -284,8 +297,10 @@ class FrameLabeler:
             self.is_EOF = True
             # print self.frame_num,"frames been labeled."
             command = lambda: exit()
-        elif key == 13:
-            command = ""
+        elif key == 127:
+            self.label[self.frame_num-1].delet_label()
+            self.load_labeled_frame(self.frame_num-1)
+            command = lambda: cv2.imshow(self.__video_name__, self.drawed_frame)
         elif key == ord("r"):
             command = lambda: self.reset_label(self.frame_num-1)
         elif key == ord("n") or key == 3:
