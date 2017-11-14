@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import cv2
 import argparse
+import cPickle as pickle
 import sys, os, numpy as np
+
 
 def get_input(msg):
     """
@@ -68,6 +70,8 @@ class RuneLabel:
 
     def add_label(self, value, step=None):
         self.is_rune_in_frame = True
+        if type(value)==type(list()) and value[0][0]>value[1][0]:
+            value[0], value[1] = value[1], value[0]
         if step==None:
             step = self.get_step()
         if step==0:
@@ -80,7 +84,10 @@ class RuneLabel:
     def delet_label(self, step=None):
         if step==None:
             step = self.get_step()
-        if step==2:
+        if step==0:
+            print "[Error] Invalid command. Empty label noting to delete"
+            pass # Empty label
+        elif step==2:
             self.grid_boding_box = []
         elif step%2==1:
             self.handwritten_number_boding_boxes.pop()
@@ -126,8 +133,6 @@ class RuneLabel:
                         self.get_draw_color("cell"),
                         2)
 
-        # self.handwritten_number_labels
-        # self.handwritten_number_positions = []
         return drawed_frame
 
     def get_draw_color(self, label=None):
@@ -143,6 +148,7 @@ class FrameLabeler:
         self.__video_name__ = v_name
         self.__video_source__ = v_source
         self.is_EOF = False
+        self.output_file_name = v_name+".rune_label"
         self.label = []
         self.frame_num = 0
 
@@ -174,7 +180,7 @@ class FrameLabeler:
             ret, frame = self.__video_source__.read()
         else:
             self.frame_num += 1
-            self.reset_current_frame_variable()
+            # self.reset_current_frame_variable()
             self.load_labeled_frame(self.frame_num-1)
             print "labeling %s frame #%d" \
                 %(self.__video_name__,self.frame_num)
@@ -195,7 +201,6 @@ class FrameLabeler:
             self.reset_current_frame_variable()
             print "labeling %s frame #%d" \
                 %(self.__video_name__,self.frame_num)
-                # %(self.__video_name__,len(self.label))
             cv2.imshow(self.__video_name__, self.current_frame)
         return frame
 
@@ -209,11 +214,8 @@ class FrameLabeler:
             self.load_labeled_frame(self.frame_num-1)
             print "labeling %s frame #%d" \
                 %(self.__video_name__,self.frame_num)
-                # %(self.__video_name__,len(self.label))
             cv2.imshow(self.__video_name__, self.drawed_frame)
         return
-
-    # def save_labeled_frame(self, index):
 
     def load_labeled_frame(self, index):
         self.current_frame = self.label[index].raw_frame
@@ -228,6 +230,12 @@ class FrameLabeler:
             self.change_mode(mode="cell")
 
     def start_labeling(self):
+        self.load_labeled_frames_from_file()
+
+        # adjust the next frame be read from source
+        for i in range(len(self.label)):
+            self.__video_source__.grab()
+
         self.read_next_frame()
         cv2.setMouseCallback(self.__video_name__,
                                 self.mouse_events_callback)
@@ -236,8 +244,9 @@ class FrameLabeler:
             if self.is_EOF:
                 break
             self.keyboard_callback(cv2.waitKey(0) & 0xFF)()
-            # print self.__video_source__.get(11)
-            # cv2.imshow(self.__video_name__, self.read_next_frame())
+
+        # save to file when labeling done
+        self.save_labeled_frames_to_file()
 
     def mouse_events_callback(self,event,x,y,flags,param):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -294,8 +303,8 @@ class FrameLabeler:
             pass
         command = lambda: ukn_key_handle()
         if key == 27:
-            self.is_EOF = True
-            # print self.frame_num,"frames been labeled."
+            print "[Exit Interupt]",len(self.label),"frames labeled."
+            self.save_labeled_frames_to_file()
             command = lambda: exit()
         elif key == 127:
             self.label[self.frame_num-1].delet_label()
@@ -331,6 +340,25 @@ class FrameLabeler:
                 self.mode = "grid"
         else:
             self.mode = mode
+        # print "[System Prompt] Mode changes to", self.mode
+
+    def save_labeled_frames_to_file(self):
+        with open(self.output_file_name,"wb") as output:
+            print "[Prompt] Saving labels to file "+self.output_file_name
+            pickle.dump(self.label, output, pickle.HIGHEST_PROTOCOL)
+            print "[Prompt] Saved labels to file "+self.output_file_name
+            output.close()
+
+    def load_labeled_frames_from_file(self):
+        try:
+            with open(self.output_file_name,"rb") as output:
+                print "[Prompt] Loading labels from file "+self.output_file_name
+                self.label = pickle.load(output)
+                print "[Prompt] Loaded labels from file "+self.output_file_name
+                output.close()
+        except IOError, err:
+            if err.errno==2:
+                pass # Not labeled file found
 
 if __name__ == "__main__":
     """
@@ -346,9 +374,7 @@ if __name__ == "__main__":
     video_source = try_open_video_file(labeling_file_path)
     assert(video_source!=None)
 
-    labeler = FrameLabeler("test", video_source)
+    labeler = FrameLabeler(args.labeling_file_path, video_source)
     labeler.start_labeling()
-    # print get_input("What's the label:")
-
 
     cv2.destroyAllWindows()
