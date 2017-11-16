@@ -7,15 +7,16 @@ And, the project proposal at https://github.com/NunchakusLei/rune_auto_activatio
 
 
 # Component List
-- **manual_labelling.py**: A script help us to label the input video manually.
+- **manual_labelling.py**: A script help us to label the input video manually. [User Manual](#manual-labelling-manual)
 
 
 # Manual Labelling Manual
 ### Execution
 The first step to use this manual labelling script is to execute it. You should able to run the manual labelling script using command following,
-  ```bash
-  python manual_labelling.py -f <labeling_file_path>
-  ```
+
+```bash
+python manual_labelling.py -f <labeling_file_path>
+```
   
 ### How to label
 Once the script is running, you should see the first frame from the video file have been displayed. New, if you move your mouse onto the frame, then **click and drag** your mouse to draw a bounding box. This bounding box will be one of the label. For grid area label, drawing a bounding box (green color) will be enough. But, a ground truth of the handwritten number in cells will need to be **enter through keyboard**. 
