@@ -344,7 +344,7 @@ class FrameLabeler:
 
     def save_labeled_frames_to_file(self):
         with open(self.output_file_name,"wb") as output:
-            print "[Prompt] Saving labels to file "+self.output_file_name
+            print "[Prompt] Saving labels ..."
             pickle.dump(self.label, output, pickle.HIGHEST_PROTOCOL)
             print "[Prompt] Saved labels to file "+self.output_file_name
             output.close()
@@ -352,7 +352,7 @@ class FrameLabeler:
     def load_labeled_frames_from_file(self):
         try:
             with open(self.output_file_name,"rb") as output:
-                print "[Prompt] Loading labels from file "+self.output_file_name
+                print "[Prompt] Loading labels ..."
                 self.label = pickle.load(output)
                 print "[Prompt] Loaded labels from file "+self.output_file_name
                 output.close()
