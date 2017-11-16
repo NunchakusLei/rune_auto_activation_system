@@ -11,6 +11,8 @@ And, the project proposal at https://github.com/NunchakusLei/rune_auto_activatio
 
 
 # Manual Labelling Manual
+**Warning**, This script is developed specific for this project. And, due to the time limit, some feature might not be perfect.
+
 ### Execution
 The first step to use this manual labelling script is to execute it. You should able to run the manual labelling script using command following,
 
