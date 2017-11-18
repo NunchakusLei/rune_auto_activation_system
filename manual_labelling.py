@@ -3,7 +3,7 @@ import cv2
 import argparse
 import cPickle as pickle
 import sys, os, numpy as np
-
+import copy
 
 def get_input(msg):
     """
@@ -159,6 +159,18 @@ class FrameLabeler:
         self.last_frame = None
         self.drawed_frame = None
         self.mode = "grid"
+        self.copied_label = None
+
+    def copy_label(self):
+        self.copied_label = copy.deepcopy(self.label[self.frame_num - 1])
+
+    def paste_label(self):
+        if(self.copied_label is not None):
+            self.label[self.frame_num - 1].is_rune_in_frame = True
+            self.label[self.frame_num - 1].grid_boding_box = self.copied_label.grid_boding_box[:]
+            self.label[self.frame_num - 1].handwritten_number_boding_boxes = self.copied_label.handwritten_number_boding_boxes[:]
+            self.label[self.frame_num - 1].handwritten_number_labels = self.copied_label.handwritten_number_labels[:]
+
 
     def reset_current_frame_variable(self):
         self.drawing = False
@@ -191,6 +203,7 @@ class FrameLabeler:
         if ret==False:
             self.is_EOF = True
         else:
+            # frame = cv2.resize(frame,(960,512));
             self.frame_num += 1
             self.last_frame = self.current_frame
             self.current_frame = frame
@@ -306,7 +319,7 @@ class FrameLabeler:
             print "[Exit Interupt]",len(self.label),"frames labeled."
             self.save_labeled_frames_to_file()
             command = lambda: exit()
-        elif key == 127:
+        elif key == ord("d"):
             self.label[self.frame_num-1].delet_label()
             self.load_labeled_frame(self.frame_num-1)
             command = lambda: cv2.imshow(self.__video_name__, self.drawed_frame)
@@ -318,6 +331,12 @@ class FrameLabeler:
             command = lambda: self.read_last_frame()
         elif key == ord("c"):
             command = lambda: self.change_mode()
+        elif key == ord("o"):
+            command = lambda: self.copy_label()
+        elif key == ord("p"):
+            command = lambda: self.paste_label()
+        elif key == ord("s"):
+            command = lambda: self.save_labeled_frames_to_file()
         elif key >= ord("0") and key <= ord("9"):
             cv2.putText(self.drawed_frame,
                         chr(key), (self.ix,self.iy),
@@ -326,6 +345,7 @@ class FrameLabeler:
                         2)
             if self.label[self.frame_num-1].get_step() % 2==1:
                 self.label[self.frame_num-1].add_label(chr(key))
+
             command = lambda: cv2.imshow(self.__video_name__,
                                          self.drawed_frame)
         else:
