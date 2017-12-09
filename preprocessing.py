@@ -5,15 +5,18 @@ import sys, os, numpy as np
 import scipy
 from common_func import *
 from manual_labelling import try_open_video_file
+from mnist_deep_estimator import numberRecognizer
 
 
 DEBUG = True
 draw_number_box_color = (255, 0, 255)
+draw_number_color = (100, 230, 0)
 single_cell_area_ratio_lower = 0.00443
 single_cell_area_ratio_upper = 0.0105
 cell_weight_height_ratio = 16/28.0
 cell_weight_height_ratio_toleration = 0.12
 
+recognizer = numberRecognizer()
 
 def draw_box(img, points, color):
     """
@@ -128,8 +131,8 @@ def region_of_interest(img, box, side_size=32):
     pts1 = sort_box_points(box)#np.float32([[56,65],[368,52],[28,387],[389,390]])
     pts2 = np.float32([[0,0],[0,side_size],[side_size,side_size],[side_size,0],])
     M = cv2.getPerspectiveTransform(pts1,pts2)
-    if DEBUG:
-        print "M: \n", M
+    # if DEBUG:
+    #     print "M: \n", M
     dst = cv2.warpPerspective(img,M,(side_size,side_size))
 
     return dst
@@ -169,6 +172,41 @@ def preprocess_for_number_recognition(src_img, rects, number_boxes):
     return number_boxes_regions_list
 
 
+def get_rim_mask(size, b_ratio=0.1):
+    center = (size[0]/2, size[1]/2)
+    mask = np.ones((size))
+    for row in range(size[0]):
+        for col in range(size[1]):
+            position = max(abs(row - center[0])/float(center[0]), \
+                   abs(col - center[1])/float(center[1]))
+            if position > (1-b_ratio):
+                # (1-b_ratio) / position
+                mask[row, col] = (1-b_ratio) / position
+    return mask
+
+
+def number_recognizing_preprocess(src):
+    # image Processing
+    img = src.copy()
+    mask = get_rim_mask(src.shape, 0.35)
+    img = 255 - img # inverse
+    img = normalize(img * (mask**10))
+    # """
+    # img = 255 - img # inverse
+    # img = cv2.erode(img, np.ones((3,3),np.uint8), iterations=1)
+    # img = normalize((img.astype(np.float32))**3)
+    # threshold
+    # ret, img = cv2.threshold(img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    # ret,img = cv2.threshold(img,127,255,cv2.THRESH_TOZERO)
+    # img = 255 - img # inverse
+    # """
+    # data preparation
+    test_data = img.reshape((1, src.shape[0] * src.shape[1])) / 255.
+
+
+    return test_data, img
+
+
 
 """
 This function get rid of redundancy number boxes
@@ -194,7 +232,7 @@ def filter_redundancy_boxes(contours, rects, number_boxes):
                     rect_i_area = rects[rect_i][1][0] * rects[rect_i][1][1]
                     rect_j_area = rects[rect_j][1][0] * rects[rect_j][1][1]
 
-                    if rect_i_area > rect_j_area:
+                    if rect_i_area < rect_j_area:
                         bad_box_indexs.append(rect_j)
                     else:
                         bad_box_indexs.append(rect_i)
@@ -215,7 +253,8 @@ def filter_redundancy_boxes(contours, rects, number_boxes):
 def preprocessing(src):
     img = src.copy()
     # apply basic image processing techniques
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # get gray scale image
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # get gray scale image
+    img = gray
     img = cv2.blur(img, (5,5))                  # blur image
     # cv2.imshow("pre_frame.png", img)
     # cv2.waitKey()
@@ -282,7 +321,7 @@ def preprocessing(src):
 
 
     if len(boxes)>9:
-        cv2.circle(src,(int(central_mass_point[0]),int(central_mass_point[1])),18,(155,255,0),-2)
+        # cv2.circle(src,(int(central_mass_point[0]),int(central_mass_point[1])),18,(155,255,0),-2)
         """
         pair_src_pts, pair_dst_pts = [], []
         dst_pts = [(0,0),(0,370),(0,740),(220,0),(220,370),(220,740),(440,0),(440,370),(440,470)]
@@ -309,18 +348,53 @@ def preprocessing(src):
         print np.array(matchesMask).reshape(len(src_pts),len(dst_pts))
         """
 
-    # extracting ROI
-    side_size = 300
-    if len(boxes)>8:
-        dst = region_of_interest(img_sharp_gray, boxes[0], side_size=side_size)
-        cv2.imshow("perspective", dst)
-
     # draw boxes
     boxes_int = []
     for box in boxes:
         box_int = np.int0(box)
         boxes_int.append(box_int)
     cv2.drawContours(src,boxes_int,-1,(0,0,255),2)
+
+
+    # extracting ROI
+    side_size = 28
+    if len(boxes)>8:
+        dst = np.zeros((side_size, 1), dtype=np.uint8)
+        pred_data = None
+        for box in boxes:
+        # for i in range(1):
+        #     box = boxes[0]
+            roi = region_of_interest(gray, box, side_size=side_size)
+            one_pred_data, roi = number_recognizing_preprocess(roi)
+
+            # prepare display for human debuging
+            dst = np.hstack((dst, roi))
+
+            # prepare prediction data
+            if pred_data is None:
+                pred_data = one_pred_data
+            else:
+                pred_data = np.vstack((pred_data, one_pred_data))
+
+        # perfom prediction
+        prediction, _ = recognizer.predict(pred_data)
+
+        # print prediction
+        i = 0
+        for box in boxes:
+            draw_pred_point = (int(sort_box_points(box)[1][0]),int(sort_box_points(box)[1][1]))
+            cv2.putText(src,
+                        str(prediction[i]), draw_pred_point,
+                        cv2.FONT_HERSHEY_PLAIN, 3,
+                        draw_number_color,
+                        5)
+            i += 1
+
+        cv2.imshow("perspective", dst)
+        # cv2.imwrite("ROI.png", dst)
+        # print dst
+
+
 
     # print len(contours)
     # """
