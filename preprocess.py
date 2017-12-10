@@ -147,6 +147,7 @@ def grid_searching_preprocess(src):
     img = src.copy()
     # apply basic image processing techniques
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # get gray scale image
+    # """
     img = cv2.blur(gray, (5,5))                  # blur image
 
     img = (img.astype(np.float64))**2
@@ -157,6 +158,15 @@ def grid_searching_preprocess(src):
     img = cv2.Canny(img, 400, 200, apertureSize=3, L2gradient=True) # find edges
 
     img = cv2.dilate(img, np.ones((3,3),np.uint8), iterations=3)    # enlarge edges
+
+    """
+
+    img = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, \
+                                 cv2.THRESH_BINARY, 15, 3)
+    # img = cv2.Canny(img, 100, 100, apertureSize=3, L2gradient=True)
+    # img = cv2.blur(gray, (5,5))                  # blur image
+    # """
+
 
     return img, gray
 
