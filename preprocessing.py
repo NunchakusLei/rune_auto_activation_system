@@ -6,11 +6,11 @@ import scipy
 from common_func import *
 from manual_labelling import try_open_video_file
 from mnist_deep_estimator import numberRecognizer
+from prediction_selection import *
 
 
 DEBUG = True
-draw_number_box_color = (255, 0, 255)
-draw_number_color = (100, 230, 0)
+
 single_cell_area_ratio_lower = 0.00443
 single_cell_area_ratio_upper = 0.0105
 cell_weight_height_ratio = 16/28.0
@@ -18,75 +18,75 @@ cell_weight_height_ratio_toleration = 0.12
 
 recognizer = numberRecognizer()
 
-def draw_box(img, points, color):
-    """
-    Draw a box
-    """
-    # cv2.line(img, (0,0), (100,100), color, 5)
-    for i in range(len(points)):
-        cv2.line(img, tuple(points[i]), tuple(points[(i+1)%(len(points))]), color, 10)
+# def draw_box(img, points, color):
+#     """
+#     Draw a box
+#     """
+#     # cv2.line(img, (0,0), (100,100), color, 5)
+#     for i in range(len(points)):
+#         cv2.line(img, tuple(points[i]), tuple(points[(i+1)%(len(points))]), color, 10)
 
 
 
-def general_number_extractor(src_img):
-    # convert source iamge to gray scale and resize
-    gray = cv2.cvtColor(src_img, cv2.COLOR_BGR2GRAY)
-    gray = scipy.misc.imresize(gray, [50, 80])
-
-    # blur
-    # gray = cv2.medianBlur(gray,13)
-    blur = cv2.GaussianBlur(gray,(5,5),0)
-
-    # threshold
-    # ret, gray = cv2.threshold(blur,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-    gray = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, \
-                                 cv2.THRESH_BINARY, 15, 3)
-    # ret, gray = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
-
-    # bit wise inverse
-    # gray = cv2.bitwise_not(gray)
-
-    ######################
-    kernel = np.ones([3, 3], np.uint8)
-    gray = cv2.dilate(gray, kernel, iterations = 1)
-
-    """
-    # Mask used to flood filling.
-    # Notice the size needs to be 2 pixels than the image.
-    h, w = gray.shape[:2]
-    mask = np.zeros((h+2, w+2), np.uint8)
-    # print(mask)
-    # print(gray)
-
-    # Floodfill from point (0, 0)
-    # cv2.floodFill(gray, mask, (50,0),255);
-
-    # print(gray[49][0])
-
-    gray = cv2.erode(gray, kernel, iterations = 1)
-    """
-
-    return gray
-
-
-
-def rim_extractor(src_img, color):
-    # select color that draw by us
-    defined_color = np.array(list(color))
-    gray = cv2.inRange(src_img, defined_color, defined_color)
-
-    # resize
-    gray = scipy.misc.imresize(gray, [50, 80])
-
-    # threshold
-    ret, gray = cv2.threshold(gray,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-
-    # enlarge rim a little bit
-    kernel = np.ones([5, 5], np.uint8)
-    gray = cv2.dilate(gray, kernel, iterations = 1)
+# def general_number_extractor(src_img):
+#     # convert source iamge to gray scale and resize
+#     gray = cv2.cvtColor(src_img, cv2.COLOR_BGR2GRAY)
+#     gray = scipy.misc.imresize(gray, [50, 80])
+#
+#     # blur
+#     # gray = cv2.medianBlur(gray,13)
+#     blur = cv2.GaussianBlur(gray,(5,5),0)
+#
+#     # threshold
+#     # ret, gray = cv2.threshold(blur,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+#     gray = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, \
+#                                  cv2.THRESH_BINARY, 15, 3)
+#     # ret, gray = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+#
+#     # bit wise inverse
+#     # gray = cv2.bitwise_not(gray)
+#
+#     ######################
+#     kernel = np.ones([3, 3], np.uint8)
+#     gray = cv2.dilate(gray, kernel, iterations = 1)
+#
+#     """
+#     # Mask used to flood filling.
+#     # Notice the size needs to be 2 pixels than the image.
+#     h, w = gray.shape[:2]
+#     mask = np.zeros((h+2, w+2), np.uint8)
+#     # print(mask)
+#     # print(gray)
+#
+#     # Floodfill from point (0, 0)
+#     # cv2.floodFill(gray, mask, (50,0),255);
+#
+#     # print(gray[49][0])
+#
+#     gray = cv2.erode(gray, kernel, iterations = 1)
+#     """
+#
+#     return gray
 
 
-    return gray
+
+# def rim_extractor(src_img, color):
+#     # select color that draw by us
+#     defined_color = np.array(list(color))
+#     gray = cv2.inRange(src_img, defined_color, defined_color)
+#
+#     # resize
+#     gray = scipy.misc.imresize(gray, [50, 80])
+#
+#     # threshold
+#     ret, gray = cv2.threshold(gray,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+#
+#     # enlarge rim a little bit
+#     kernel = np.ones([5, 5], np.uint8)
+#     gray = cv2.dilate(gray, kernel, iterations = 1)
+#
+#
+#     return gray
 
 
 def sort_box_points(box):
@@ -139,40 +139,43 @@ def region_of_interest(img, box, side_size=32):
 
 
 
-"""
-This function will extract roi after the number boxes have been found
-"""
-def preprocess_for_number_recognition(src_img, rects, number_boxes):
-    global draw_number_box_color
-    number_boxes_regions_list = list()
-    box_index = 0
-
-    for box in number_boxes:
-
-        # prepare for extracting process
-        general_number_temp = general_number_extractor(region_of_interest(src_img, box))
-        draw_box(src_img, box, draw_number_box_color) # draw the rim
-        rim_temp = rim_extractor(region_of_interest(src_img, box), draw_number_box_color)
-
-        box_center = rects[box_index][0]
-        cv2.circle(src_img, (int(round(box_center[0])), int(round(box_center[1]))), 1, (0,0,255), 5)
-
-
-        # extracting
-        roi_temp = rim_temp + general_number_temp
-
-        kernel = np.ones([3, 3], np.uint8)
-        extracted_result = cv2.erode(roi_temp, kernel, iterations = 1)
-
-        number_boxes_regions_list.append(extracted_result)
-
-        # update loop variable
-        box_index += 1
-
-    return number_boxes_regions_list
+# """
+# This function will extract roi after the number boxes have been found
+# """
+# def preprocess_for_number_recognition(src_img, rects, number_boxes):
+#     global draw_number_box_color
+#     number_boxes_regions_list = list()
+#     box_index = 0
+#
+#     for box in number_boxes:
+#
+#         # prepare for extracting process
+#         general_number_temp = general_number_extractor(region_of_interest(src_img, box))
+#         draw_box(src_img, box, draw_number_box_color) # draw the rim
+#         rim_temp = rim_extractor(region_of_interest(src_img, box), draw_number_box_color)
+#
+#         box_center = rects[box_index][0]
+#         cv2.circle(src_img, (int(round(box_center[0])), int(round(box_center[1]))), 1, (0,0,255), 5)
+#
+#
+#         # extracting
+#         roi_temp = rim_temp + general_number_temp
+#
+#         kernel = np.ones([3, 3], np.uint8)
+#         extracted_result = cv2.erode(roi_temp, kernel, iterations = 1)
+#
+#         number_boxes_regions_list.append(extracted_result)
+#
+#         # update loop variable
+#         box_index += 1
+#
+#     return number_boxes_regions_list
 
 
 def get_rim_mask(size, b_ratio=0.1):
+    """
+    This function generates a mask of rim
+    """
     center = (size[0]/2, size[1]/2)
     mask = np.ones((size))
     for row in range(size[0]):
@@ -188,9 +191,9 @@ def get_rim_mask(size, b_ratio=0.1):
 def number_recognizing_preprocess(src):
     # image Processing
     img = src.copy()
+    img = 255 - img                     # inverse
     mask = get_rim_mask(src.shape, 0.35)
-    img = 255 - img # inverse
-    img = normalize(img * (mask**10))
+    img = normalize(img * (mask**10))   # rim removal
     # """
     # img = 255 - img # inverse
     # img = cv2.erode(img, np.ones((3,3),np.uint8), iterations=1)
@@ -232,7 +235,7 @@ def filter_redundancy_boxes(contours, rects, number_boxes):
                     rect_i_area = rects[rect_i][1][0] * rects[rect_i][1][1]
                     rect_j_area = rects[rect_j][1][0] * rects[rect_j][1][1]
 
-                    if rect_i_area < rect_j_area:
+                    if rect_i_area > rect_j_area:
                         bad_box_indexs.append(rect_j)
                     else:
                         bad_box_indexs.append(rect_i)
@@ -245,6 +248,45 @@ def filter_redundancy_boxes(contours, rects, number_boxes):
             good_contours.append(contours[i])
             good_rects.append(rects[i])
             good_boxes.append(number_boxes[i])
+
+    return good_contours, good_rects, good_boxes, bad_box_indexs
+
+
+
+"""
+This function get rid of outlier number boxes
+"""
+def filter_outlier_boxes(contours, rects, number_boxes):
+    dist_list = [0.0] * len(rects)
+
+    for rect_i in range(len(rects)):
+        for rect_j in range(rect_i+1,len(rects)):
+            rect_i_center_x = rects[rect_i][0][0]
+            rect_i_center_y = rects[rect_i][0][1]
+            rect_j_center_x = rects[rect_j][0][0]
+            rect_j_center_y = rects[rect_j][0][1]
+
+            dist_x = abs(rect_i_center_x - rect_j_center_x)
+            dist_y = abs(rect_i_center_y - rect_j_center_y)
+
+            dist_ij = dist_x**2 + dist_y**2
+
+            dist_list[rect_i] += dist_ij
+            dist_list[rect_j] += dist_ij
+
+    # print min(dist_list)
+
+    bad_box_indexs = list()
+    good_contours = list()
+    good_rects = list()
+    good_boxes = list()
+    for i in range(min(9, len(rects))):
+        current_min_index = dist_list.index(min(dist_list))
+
+        bad_box_indexs.append(dist_list.pop(current_min_index))
+        good_contours.append(contours.pop(current_min_index))
+        good_rects.append(rects.pop(current_min_index))
+        good_boxes.append(number_boxes.pop(current_min_index))
 
     return good_contours, good_rects, good_boxes, bad_box_indexs
 
@@ -317,7 +359,8 @@ def preprocessing(src):
         central_mass_point[0] = central_mass_point[0]/len(boxes)
         central_mass_point[1] = central_mass_point[1]/len(boxes)
 
-    _, rects, boxes, _ = filter_redundancy_boxes(contours, rects, boxes)
+    contours, rects, boxes, _ = filter_redundancy_boxes(contours, rects, boxes)
+    contours, rects, boxes, _ = filter_outlier_boxes(contours, rects, boxes)
 
 
     if len(boxes)>9:
@@ -358,8 +401,8 @@ def preprocessing(src):
 
     # extracting ROI
     side_size = 28
-    if len(boxes)>8:
-        dst = np.zeros((side_size, 1), dtype=np.uint8)
+    if len(boxes)>1:
+        dst = None
         pred_data = None
         for box in boxes:
         # for i in range(1):
@@ -368,7 +411,10 @@ def preprocessing(src):
             one_pred_data, roi = number_recognizing_preprocess(roi)
 
             # prepare display for human debuging
-            dst = np.hstack((dst, roi))
+            if dst is None:
+                dst = roi
+            else:
+                dst = np.hstack((dst, roi))
 
             # prepare prediction data
             if pred_data is None:
@@ -377,22 +423,46 @@ def preprocessing(src):
                 pred_data = np.vstack((pred_data, one_pred_data))
 
         # perfom prediction
-        prediction, _ = recognizer.predict(pred_data)
+        prediction, probabilities = recognizer.predict(pred_data)
+
+        # apply constrain rule
+        post_extractor = predExtractor(prediction, probabilities, boxes)
+        perplexity = post_extractor.get_perplexity()
+        # print post_extractor.get_pred()
+        # post_extractor.number_redundancy_removal()
+
+        # post_extractor.draw_pred(src)
+        post_extractor.zero_removal()
+        duplicates_num, duplicates = post_extractor.find_duplicates()
+        # print "duplicates:"
+        # print duplicates
+        # print "duplicates_num:"
+        # print duplicates_num
+        # post_extractor.number_redundancy_removal2()
+
+        if perplexity > 0.25:
+            post_extractor.dump_preds()
+        # print prediction.dtype
+
 
         # print prediction
-        i = 0
-        for box in boxes:
-            draw_pred_point = (int(sort_box_points(box)[1][0]),int(sort_box_points(box)[1][1]))
-            cv2.putText(src,
-                        str(prediction[i]), draw_pred_point,
-                        cv2.FONT_HERSHEY_PLAIN, 3,
-                        draw_number_color,
-                        5)
-            i += 1
+        if perplexity <= 0.25:
+            # post_extractor.number_redundancy_removal2()
+            if len(boxes)<10:
+                post_extractor.number_redundancy_removal3()
+
+            # print post_extractor.find_missed_number()
+
+            post_extractor.draw_pred(src)
 
         cv2.imshow("perspective", dst)
         # cv2.imwrite("ROI.png", dst)
-        # print dst
+
+        # print prediction
+        # print probabilities
+        # sorted_p = np.sort(probabilities)
+        # print sorted_p[:,9] - sorted_p[:,8]
+
 
 
 
@@ -423,6 +493,9 @@ def decode_src_and_feed_preprocessing(video_src, fps=24, src_type='image'):
                 wait_key_time = 1000//fps
             else:
                 wait_key_time = 0
+
+        # print 480./(frame.shape)[1]
+        # frame = cv2.resize(frame, None, None, 480./frame.shape[1], 480./frame.shape[1])
         last_frame = frame.copy()
         img = preprocessing(frame) # do the preprocessing
         cv2.imshow("preprocessing visualize", frame)
@@ -451,10 +524,15 @@ def parse_user_input():
                                      epilog='')
 
     requiredNamed = parser.add_argument_group('required arguments')
-    requiredNamed.add_argument('-f','--file',
+    src_group = requiredNamed.add_mutually_exclusive_group(required=True)
+    src_group.add_argument('-f','--file',
                         dest='input_file_path',
-                        help='User input argument for the image source file path.',
-                        required=True)
+                        help='User input argument for the image source file path.')
+    src_group.add_argument('-c','--camera',
+                        action='store_const',
+                        const=0,
+                        dest='input_file_path',
+                        help='Feed with a webcam.')
 
     group = requiredNamed.add_mutually_exclusive_group(required=True)
     group.add_argument('-v', '--video',
@@ -481,10 +559,12 @@ if __name__ == "__main__":
     # parse user input
     args = parse_user_input()
 
-    # read the input file
-    input_file_dir = os.path.dirname(os.path.abspath(__file__))
-    input_file_path = os.path.join(input_file_dir, args.input_file_path)
-    video_source = try_open_video_file(input_file_path)
+    # if(args.input_file_path)
+    # # read the input file
+    # input_file_dir = os.path.dirname(os.path.abspath(__file__))
+    # input_file_path = os.path.join(input_file_dir, args.input_file_path)
+    video_source = try_open_video_file(args.input_file_path)
+    # video_source = try_open_video_file(0)
     assert(video_source!=None)
 
     # decode source and feed preprocessing
