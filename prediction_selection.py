@@ -7,7 +7,7 @@ class predExtractor:
     """
     This class further extract information based on
     the result of recognizer apply with sepecific
-    rules as constrain
+    rules as constrains
     """
     def __init__(self, predictions, probabilities, boxes):
         """ Initializer """
