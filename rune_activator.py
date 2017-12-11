@@ -27,7 +27,7 @@ def activate_rune(src):
     # digit tube searching
     # digit tube recognition
     # prompt light
-    return predictions
+    return predictions, rects
 
 
 
@@ -56,7 +56,9 @@ def decode_src_and_feed_preprocessing(video_src, fps=24, src_type='image'):
         # print 480./(frame.shape)[1]
         # frame = cv2.resize(frame, None, None, 480./frame.shape[1], 480./frame.shape[1])
         last_frame = frame.copy()
-        img = activate_rune(frame) # perform the algorithm
+
+        activate_rune(frame) # perform the algorithm
+
         cv2.imshow("rune activation visualize", frame)
         key = cv2.waitKey(wait_key_time) & 0xFF
     return

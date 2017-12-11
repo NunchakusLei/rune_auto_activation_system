@@ -151,6 +151,7 @@ def grid_searching_preprocess(src):
     img = cv2.blur(gray, (5,5))                  # blur image
 
     img = (img.astype(np.float64))**2
+    # cv2.imshow("test", normalize(img))
     img = cv2.GaussianBlur(img, (3,3), 0)        # blur image again
 
     img = normalize(img)
