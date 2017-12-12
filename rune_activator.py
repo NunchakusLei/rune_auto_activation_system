@@ -69,18 +69,21 @@ def parse_user_input():
     """
     Parse the command line input argument
 
-    usage: preprocessing.py [-h] -f INPUT_FILE_PATH (-v | -i)
+    usage: rune_activator.py [-h] (-f INPUT_FILE_PATH | -c) (-v | -i)
 
-    Preprocessing script.
+    Rune Auto-activation System.
 
     optional arguments:
       -h, --help            show this help message and exit
+
+    required arguments:
       -f INPUT_FILE_PATH, --file INPUT_FILE_PATH
                             User input argument for the image source file path.
+      -c, --camera          Feed with a webcam.
       -v, --video           Input source type indicated as video.
       -i, --image           Input source type indicated as image.
     """
-    description = 'Preprocessing script.'
+    description = 'Rune Auto-activation System.'
     parser = argparse.ArgumentParser(description=description,
                                      epilog='')
 

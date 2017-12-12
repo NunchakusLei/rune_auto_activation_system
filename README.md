@@ -20,8 +20,10 @@ And, the project proposal at https://github.com/NunchakusLei/rune_auto_activatio
 
 
 # Rune Auto-activation System Manual
+This module preform the overall algorithm to find the grid area, cells, and recognize the handwritten digit in cells. For human visualization, it will draw the detected cell using bounding box in red color and write the recognized digit beside the bounding box in green color.
 
 ### Execution (How to run)
+
 ```bash
 python rune_activator.py [-h] (-f INPUT_FILE_PATH | -c) (-v | -i)
 ```
@@ -40,7 +42,8 @@ python rune_activator.py [-h] (-f INPUT_FILE_PATH | -c) (-v | -i)
 
   -i, --image           (Input source type indicated as image.)
 
-### Example execution commands ###
+### Example Rune Auto-activation System execution commands ###
+
 For example, using the command blow to execute the Rune Auto-activation System feeding a video file from path ```data/Competition2017_buff.mpeg```.
 ```bash
 python rune_activator.py -f data/Competition2017_buff.mpeg -v
@@ -58,12 +61,53 @@ python rune_activator.py -c -v
 
 ### Key Command List
 - **```p```**: Pause/Resume playing the testing video.
+- **```q```**: Exit.
 - **```s```**: Save current frame as image for further analysis. Image file will be save on the same directory the program be executed with filename ```pre_frame.png```.
 
 
 
 # Evaluation Manual
+This module preform the evaluation using our manual labelled data. For human visualization, it will draw ground truth and algorithm's output at the same time. The label will be thiner than the system output.
+
 ### Execution (How to run)
+**Warning**, Please make sure the label file (the .rune_label file) in the same directory as the testing video file is.
+
+```bash
+python rune_eval.py [-h] -f FILE_PATH
+```
+
+**optional arguments:***
+
+  -h, --help            (show this help message and exit)
+
+**required arguments:**
+
+  -f FILE_PATH, --file FILE_PATH  (User input argument for the testing file path.)
+
+### Example evaluation execution commands ###
+For example, using the command blow to evaluate the Rune Auto-activation System using a labelled video file for ```data/Competition2017_buff.mpeg```.
+
+```bash
+python rune_eval.py -f data/Competition2017_buff.mpeg
+```
+
+### Evaluation Displaying ###
+The system will be evaluated with the precision of overall performance. It prints the current evaluation data each second like this,
+```
+Truth positive: 4104
+Truth negative: 171
+False positive: 412
+----- Precision: 0.960000
+```
+
+When the evaluation process is complete, it will print the following evaluation result.
+```
+=============== Over All Results ===============
+Truth positive: 4104
+Truth negative: 171
+False positive: 413
+----- Precision: 0.960000
+```
 
 
 

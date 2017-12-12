@@ -55,11 +55,14 @@ class runeEvaluator(FrameLabeler):
                 label = self.label[i]
                 labeled = label.draw_label(visual)
 
-                if i%fps==0 and (TN+TP)!=0:
+                if i%fps==0:
                     print "Truth positive: %d" % TP
-                    print "Truth nagative: %d" % TN
+                    print "Truth negative: %d" % TN
                     print "False positive: %d" % FP
-                    print "----- Persice: %f" % (float(TP) / (TN+TP))
+                    if (TN+TP)!=0:
+                        print "----- Precision: %f" % (float(TP) / (TN+TP))
+                    else:
+                        print "----- Precision: NaN"
 
                 cv2.imshow("visualize", labeled)
                 cv2.waitKey(1000/fps)
@@ -68,9 +71,12 @@ class runeEvaluator(FrameLabeler):
         if mode=="show":
             print "=============== Over All Results ==============="
             print "Truth positive: %d" % TP
-            print "Truth nagative: %d" % TN
+            print "Truth negative: %d" % TN
             print "False positive: %d" % FP
-            print "----- Persice: %f" % (float(TP) / (TN+TP))
+            if (TN+TP)!=0:
+                print "----- Precision: %f" % (float(TP) / (TN+TP))
+            else:
+                print "----- Precision: NaN"
         return TP, TN, FP
 
     def eval_a_frame(self, frame_index=None):
@@ -105,10 +111,36 @@ class runeEvaluator(FrameLabeler):
         return TP, TN, FP, frame
 
 
+def parse_user_input():
+    """
+    parse the command line input argument
+    """
+    description = 'Rune Auto-activation System evaluation script.'
+    parser = argparse.ArgumentParser(description=description,
+                                     epilog='')
+
+    parser.add_argument('-f','--file',
+                        dest='file_path',
+                        help='User input argument for the testing file path.',
+                        required=True)
+
+    args = parser.parse_args(sys.argv[1:])
+
+    return args
+
+
+
 if __name__ == "__main__":
     """
     Main function
     """
-    evaluator = runeEvaluator("data/Competition2017_buff.mpeg", None)
+    # parse user input
+    args = parse_user_input()
+
+    video_source = try_open_video_file(args.file_path)
+    assert(video_source!=None)
+
+    # evaluator = runeEvaluator("data/Competition2017_buff.mpeg", None)
+    evaluator = runeEvaluator(args.file_path, None)
     evaluator.load_labeled_frames_from_file()
     evaluator.eval()
