@@ -39,23 +39,26 @@ python rune_activator.py [-h] (-f INPUT_FILE_PATH | -c) (-v | -i)
   -v, --video           (Input source type indicated as video.)
 
   -i, --image           (Input source type indicated as image.)
-  
 
-For example,
+### Example execution commands ###
+For example, using the command blow to execute the Rune Auto-activation System feeding a video file from path ```data/Competition2017_buff.mpeg```.
 ```bash
 python rune_activator.py -f data/Competition2017_buff.mpeg -v
 ```
-The command above will execute the Rune Auto-activation System feeding a video file from path ```data/Competition2017_buff.mpeg```.
 
-Or,
-For example,
+Or, using the command blow to execute the Auto-activation System feeding a image file from path ```data/pre_frame_1.png```.
 ```bash
-python rune_activator.py -f data/Competition2017_buff.mpeg -v
+python rune_activator.py -f data/pre_frame_1.png -i
+```
+
+Or, using the command blow to execute the Auto-activation System feeding a video source from a webcam.
+```bash
+python rune_activator.py -c -v
 ```
 
 ### Key Command List
 - **```p```**: Pause/Resume playing the testing video.
-- **```s```**: Save current frame as image for further analysis.
+- **```s```**: Save current frame as image for further analysis. Image file will be save on the same directory the program be executed with filename ```pre_frame.png```.
 
 
 
