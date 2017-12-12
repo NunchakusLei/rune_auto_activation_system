@@ -8,11 +8,58 @@ And, the project proposal at https://github.com/NunchakusLei/rune_auto_activatio
 
 
 # Component List
-- **manual_labelling.py**: A script help us to label the input video manually. [User Manual](#manual-labelling-manual)
+- **manual_labelling.py**: A script help us to label the input video manually. [User Manual](#manual-labelling-user-manual)
+- **common_func.py**: A set of functions that commonly use across the whole system, such as the normalization operation for image displaying.
+- **mnist_deep.py**: A CNN handwritten digit recognizer implementation from Tensorflow: https://www.tensorflow.org/get_started/mnist/pros
+- **mnist_deep_estimator.py**: A module perform the CNN to recognize the handwritten digit.
+- **preprocess.py**: A module perform image processing techniques as preprocessing for grid searching and handwritten digit recognition. This module also contains the process of applying competition constraints to filter out outliner cell detections.
+- **prediction_selection.py**: A module perform final adjusting to reduce error make by the CNN handwritten digit recognizer.
+- **rune_activator.py**: The Rune Auto-activation System. [User Manual](#rune-auto-activation-system-manual)
+- **rune_eval.py**: A module to evaluate the accuracy of the Rune Auto-activation System. [User Manual](#evaluation-manual)
 
 
 
-# Manual Labelling Manual
+# Rune Auto-activation System Manual
+
+### Execution (How to run)
+```bash
+python rune_activator.py [-h] (-f INPUT_FILE_PATH | -c) (-v | -i)
+```
+
+optional arguments:
+  -h, --help            show this help message and exit
+
+required arguments:
+  -f INPUT_FILE_PATH, --file INPUT_FILE_PATH
+                        User input argument for the image source file path.
+  -c, --camera          Feed with a webcam.
+  -v, --video           Input source type indicated as video.
+  -i, --image           Input source type indicated as image.
+
+For example,
+```bash
+python rune_activator.py -f data/Competition2017_buff.mpeg -v
+```
+The command above will execute the Rune Auto-activation System feeding a video file from path ```data/Competition2017_buff.mpeg```.
+
+Or,
+For example,
+```bash
+python rune_activator.py -f data/Competition2017_buff.mpeg -v
+```
+
+### Key Command List
+- **```p```**: Pause/Resume playing the testing video.
+- **```s```**: Save current frame as image for further analysis.
+
+
+
+# Evaluation Manual
+### Execution (How to run)
+
+
+
+# Manual Labelling User Manual
 **Warning**, This script is developed specific for this project. And, due to the time limit, some feature might not be perfect.
 
 ### Execution
@@ -46,3 +93,4 @@ There are two mode for labelling, "grid" and "cell". The defualt mode will be "g
 
 
 # References
+- https://www.tensorflow.org/get_started/mnist/pros
