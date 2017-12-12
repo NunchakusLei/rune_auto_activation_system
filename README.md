@@ -27,14 +27,21 @@ python rune_activator.py [-h] (-f INPUT_FILE_PATH | -c) (-v | -i)
 ```
 
 optional arguments:
+
   -h, --help            show this help message and exit
 
 required arguments:
+
   -f INPUT_FILE_PATH, --file INPUT_FILE_PATH
+ 
                         User input argument for the image source file path.
+
   -c, --camera          Feed with a webcam.
+
   -v, --video           Input source type indicated as video.
+
   -i, --image           Input source type indicated as image.
+  
 
 For example,
 ```bash
